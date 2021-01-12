@@ -2,15 +2,22 @@ package com.cherniak.xlsxfile.xlsfilecreate;
 
 import com.incesoft.tools.excel.xlsx.Sheet.SheetRowReader;
 import com.incesoft.tools.excel.xlsx.SimpleXLSXWorkbook;
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.AttributeView;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -19,6 +26,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.StreamingOutput;
 import javax.xml.parsers.ParserConfigurationException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.openxml4j.exceptions.OpenXML4JException;
@@ -52,6 +61,8 @@ import org.openxmlformats.schemas.spreadsheetml.x2006.main.CTTable;
 import org.openxmlformats.schemas.spreadsheetml.x2006.main.CTTableColumn;
 import org.openxmlformats.schemas.spreadsheetml.x2006.main.CTTableColumns;
 import org.openxmlformats.schemas.spreadsheetml.x2006.main.CTTableStyleInfo;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.stereotype.Service;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.InputSource;
@@ -263,7 +274,7 @@ public class ExcelService {
   }
 
   //stream generate xlsx using XSSFWorkbook how template for table size in SXSSFWorkbook
-  public ByteArrayOutputStream generateOldFile(List<Accident> accidentList, LocalDate createDate)
+  public Path generateOldFile(List<Accident> accidentList, LocalDate createDate)
       throws IOException, OpenXML4JException, SAXException {
     XSSFWorkbook workbook = new XSSFWorkbook();
     XSSFSheet sheet = workbook.createSheet("ЗАРЕГИСТРИРОВАННЫЕ СЛУЧАИ");
@@ -329,17 +340,21 @@ public class ExcelService {
 
       tableRow.createCell(cell).setCellValue("r.getErrorDescription()");
     }
-//    File file = new File(
-//        "C:\\Users\\barse\\IdeaProjects\\xls-file-create\\pomes2.xlsx");
-//    file.getParentFile().mkdirs();
 
-//    FileOutputStream outFile = new FileOutputStream(file);
-//    workbookS.write(outFile);
-//    System.out.println("Created file: " + file.getAbsolutePath());
-//    outFile.close();
-    ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
-    workbookS.write(byteOut);
-    System.out.println("ByteArrayOutputStream записан " + byteOut.toString(Charset.defaultCharset()));
+    Path filePath = Paths.get("_OUT.xlsx");
+    Files.deleteIfExists(filePath);
+    //new File("myfile_OUT.xlsx");
+    //file.getParentFile().mkdirs();
+
+    FileOutputStream outFile = new FileOutputStream(filePath.toFile());
+    workbookS.write(outFile);
+    System.out.println("Created file: " + filePath.getFileName().toString());
+    outFile.close();
+    //ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+
+    //FileSystemResource fsr = new FileSystemResource("C:\\Users\\barse\\IdeaProjects\\xls-file-create\\myfile_OUT2.xlsx");
+//    workbookS.write(byteOut);
+    //System.out.println("ByteArrayOutputStream записан " + byteOut.toString(Charset.defaultCharset()));
     workbookS.dispose();
     workbookS.close();
 
@@ -359,7 +374,7 @@ public class ExcelService {
  */
     //map.forEach((k,v) -> System.out.println(k + " - " + v));
 
-    return byteOut;
+   return filePath;
   }
 
   //my deprecated inmemory generators
