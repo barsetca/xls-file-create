@@ -3,24 +3,26 @@ package com.cherniak.xlsxfile.xlsfilecreate;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.openxml4j.exceptions.OpenXML4JException;
 import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.util.InMemoryResource;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.xml.sax.SAXException;
 
@@ -31,7 +33,7 @@ public class FileController {
 
   private final ExcelService excelService;
   private final JExcelService jExcelService;
-  private final static int ROWS = 1000;
+  private final static int ROWS = 1_000;
 
   @GetMapping(path = "/download", produces = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<Resource> getAllByDate() throws IOException {
@@ -47,20 +49,42 @@ public class FileController {
   }
 
   @GetMapping(path = "/download2", produces = MediaType.MULTIPART_FORM_DATA_VALUE)
-  public ResponseEntity<Resource> getAllByDate2()
+  public ResponseEntity<Resource> getAllByDate2(@RequestParam String id)
       throws IOException, OpenXML4JException, SAXException, InterruptedException {
     long startTime = System.currentTimeMillis();
-    Resource file = getXlsFile2();
-    System.out.println("file.getDescription() " + 500 + file.getFilename());
-    ResponseEntity<Resource> response = ResponseEntity.ok()
-        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" +
-            URI.create(500 + file.getFilename()).toASCIIString())
-        .body(file);
+    Resource file = getXlsFile2(id);
+    System.out.println("file.getDescription() " + file.getDescription());
     long endTime = System.currentTimeMillis();
     System.out.println("Total execution time: " + (endTime - startTime) + "ms");
-    return response;
+
+//    final ExecutorService executorService = Executors.newSingleThreadExecutor();
+//    executorService.submit(() -> deleteTempFile(file.getFilename()));
+//    executorService.shutdown();
+
+    Runnable task = () -> deleteTempFile(file.getFilename());
+
+    ScheduledExecutorService executorService = Executors
+        .newSingleThreadScheduledExecutor();
+    executorService.schedule(task, 1, TimeUnit.MINUTES);
+    executorService.shutdown();
+
+    return ResponseEntity.ok()
+        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" +
+            URI.create(id + "_OUT.xlsx").toASCIIString())
+        .body(file);
+
 //    return ResponseEntity.status(HttpStatus.NOT_FOUND)
 //        .body(new ByteArrayResource("Файл не найден".getBytes(StandardCharsets.UTF_8)));
+  }
+
+  private void deleteTempFile(String tempFileName) {
+    try {
+      //TimeUnit.MINUTES.sleep(1);
+      Files.deleteIfExists(Paths.get(Objects.requireNonNull(tempFileName)));
+      System.out.println();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
   }
 //
 //  @GetMapping(path = "/download3", produces = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -104,7 +128,7 @@ public class FileController {
   }
 
 
-  private Resource getXlsFile2() throws IOException, OpenXML4JException, SAXException {
+  private Resource getXlsFile2(String id) throws IOException, OpenXML4JException, SAXException {
     List<Accident> allAccidents = new LinkedList<>();
     for (int i = 0; i < ROWS; i++) {
       Accident accident = new Accident();
@@ -128,7 +152,7 @@ public class FileController {
 //        excelService.generateOldFile(allAccidents, LocalDate.now()).toByteArray(),
 //        "myfile_OUT2.xlsx"
 //    );
-     return new FileSystemResource(excelService.generateOldFile(allAccidents, LocalDate.now()));
+    return new FileSystemResource(excelService.generateOldFile(allAccidents, LocalDate.now(), id));
   }
 //
 //  private Resource getXlsFile3() throws IOException, WriteException {
