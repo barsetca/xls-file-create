@@ -3,21 +3,16 @@ package com.cherniak.xlsxfile.xlsfilecreate;
 import com.incesoft.tools.excel.xlsx.Sheet.SheetRowReader;
 import com.incesoft.tools.excel.xlsx.SimpleXLSXWorkbook;
 import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
-import java.nio.file.attribute.AttributeView;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -26,8 +21,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.StreamingOutput;
 import javax.xml.parsers.ParserConfigurationException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.openxml4j.exceptions.OpenXML4JException;
@@ -61,8 +54,6 @@ import org.openxmlformats.schemas.spreadsheetml.x2006.main.CTTable;
 import org.openxmlformats.schemas.spreadsheetml.x2006.main.CTTableColumn;
 import org.openxmlformats.schemas.spreadsheetml.x2006.main.CTTableColumns;
 import org.openxmlformats.schemas.spreadsheetml.x2006.main.CTTableStyleInfo;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.stereotype.Service;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.InputSource;
@@ -274,7 +265,7 @@ public class ExcelService {
   }
 
   //stream generate xlsx using XSSFWorkbook how template for table size in SXSSFWorkbook
-  public Path generateOldFile(List<Accident> accidentList, LocalDate createDate)
+  public InputStream generateOldFile(List<Accident> accidentList, LocalDate createDate, String id)
       throws IOException, OpenXML4JException, SAXException {
     XSSFWorkbook workbook = new XSSFWorkbook();
     XSSFSheet sheet = workbook.createSheet("ЗАРЕГИСТРИРОВАННЫЕ СЛУЧАИ");
@@ -341,14 +332,19 @@ public class ExcelService {
       tableRow.createCell(cell).setCellValue("r.getErrorDescription()");
     }
 
-    Path filePath = Paths.get("_OUT.xlsx");
-    Files.deleteIfExists(filePath);
+    Path filePath = Files.createTempFile(Paths.get(""), "temp-download-", ".xlsx");
+    File file = filePath.toFile();
+
+    //Path filePath = Paths.get(id + "_OUT.xlsx");
+//    File file = File.createTempFile("test", ".xlsx");
+//    file.deleteOnExit();
+    //Files.deleteIfExists(filePath);
     //new File("myfile_OUT.xlsx");
     //file.getParentFile().mkdirs();
 
-    FileOutputStream outFile = new FileOutputStream(filePath.toFile());
+    FileOutputStream outFile = new FileOutputStream(file);
     workbookS.write(outFile);
-    System.out.println("Created file: " + filePath.getFileName().toString());
+    System.out.println("Created file: " + filePath.toAbsolutePath().toString());
     outFile.close();
     //ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
 
@@ -364,6 +360,11 @@ public class ExcelService {
     long timeStart = System.currentTimeMillis();
  */
 
+    //BufferedInputStream inputStream = new BufferedInputStream(new XlsxInputStreamImpl(file));
+    //InputStream is = new XlsxInputStreamImpl(file);
+    //inputStream.close();
+    //is.close();
+
     //Map<String, String> map = parseFileSjxlsx(inputStream);
 /*
    Map<String, String> map = parseExcelWithoutMapping(inputStream);
@@ -373,8 +374,51 @@ public class ExcelService {
     inputStream.close();
  */
     //map.forEach((k,v) -> System.out.println(k + " - " + v));
+    System.out.println("Main before return Файл существует? " + file.exists());
+    if (file.exists()) {
+      System.out.println(file.getName() + " length " + file.length());
+    }
+//
+//    InputStream inputStream = new InputStreamDelegator(new BufferedInputStream(new XlsxInputStreamImpl(file))
+//        , file
+//    );
 
-   return filePath;
+    //    return new InputStream() {
+//      final BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
+//
+//      @Override
+//      public int read() throws IOException {
+//        return bis.read();
+//      }
+//
+//      @Override
+//      public void close() throws IOException {
+//        bis.close();
+//       boolean isDelete = false;
+//           //Files.deleteIfExists(file.toPath());
+//        System.out.println(
+//            "Files.deleteIfExists " + isDelete + "\n" + file
+//                .getAbsolutePath());
+//      }
+//    };
+    return new InputStreamDelegator(new BufferedInputStream(new FileInputStream(file)),
+      () -> deleteTempFile(file), file);
+
+  }
+//    return new InputStreamDelegator(new BufferedInputStream(new XlsxInputStreamImpl(file)), () -> deleteTempFile(file));
+//    //return filePath;
+//  }
+  private void deleteTempFile(File file) {
+    try {
+      System.out.println("deleteTempFile Файл существует? " + file.exists());
+      if (file.exists()) {
+        System.out.println(file.getName() + " length " + file.length());
+      }
+      boolean delete = Files.deleteIfExists(file.toPath());
+      System.out.println("Files.deleteIfExists " + delete +"\n" + file.getAbsolutePath());
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
   }
 
   //my deprecated inmemory generators
@@ -596,7 +640,7 @@ public class ExcelService {
   public Map<String, String> parseFileSjxlsx(InputStream inputStream)
       throws IOException {
     Map<String, String> map = new HashMap<>();
-    Path tempPath = Files.createTempFile("sjxlsx-", ".xlsx");
+    Path tempPath = Files.createTempFile(Paths.get(""), "sjxlsx-", ".xlsx");
     Files.copy(inputStream, tempPath, StandardCopyOption.REPLACE_EXISTING);
     inputStream.close();
     SimpleXLSXWorkbook simpleWorkbook = new SimpleXLSXWorkbook(tempPath.toFile());

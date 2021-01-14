@@ -15,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.openxml4j.exceptions.OpenXML4JException;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -33,7 +34,7 @@ public class FileController {
 
   private final ExcelService excelService;
   private final JExcelService jExcelService;
-  private final static int ROWS = 1_000;
+  private final static int ROWS = 2_000;
 
   @GetMapping(path = "/download", produces = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<Resource> getAllByDate() throws IOException {
@@ -61,12 +62,12 @@ public class FileController {
 //    executorService.submit(() -> deleteTempFile(file.getFilename()));
 //    executorService.shutdown();
 
-    Runnable task = () -> deleteTempFile(file.getFilename());
-
-    ScheduledExecutorService executorService = Executors
-        .newSingleThreadScheduledExecutor();
-    executorService.schedule(task, 1, TimeUnit.MINUTES);
-    executorService.shutdown();
+//    Runnable task = () -> deleteTempFile(file.getFilename());
+//
+//    ScheduledExecutorService executorService = Executors
+//        .newSingleThreadScheduledExecutor();
+//    executorService.schedule(task, 1, TimeUnit.MINUTES);
+//    executorService.shutdown();
 
     return ResponseEntity.ok()
         .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" +
@@ -152,7 +153,7 @@ public class FileController {
 //        excelService.generateOldFile(allAccidents, LocalDate.now()).toByteArray(),
 //        "myfile_OUT2.xlsx"
 //    );
-    return new FileSystemResource(excelService.generateOldFile(allAccidents, LocalDate.now(), id));
+    return new InputStreamResource(excelService.generateOldFile(allAccidents, LocalDate.now(), id));
   }
 //
 //  private Resource getXlsFile3() throws IOException, WriteException {
