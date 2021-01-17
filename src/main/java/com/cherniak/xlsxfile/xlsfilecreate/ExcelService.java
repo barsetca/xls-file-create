@@ -50,6 +50,7 @@ import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFTable;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.xmlbeans.impl.xb.ltgfmt.TestCase;
 import org.openxmlformats.schemas.spreadsheetml.x2006.main.CTTable;
 import org.openxmlformats.schemas.spreadsheetml.x2006.main.CTTableColumn;
 import org.openxmlformats.schemas.spreadsheetml.x2006.main.CTTableColumns;
@@ -304,7 +305,6 @@ public class ExcelService {
     for (int i = 0; i < columnNames.size(); i++) {
       headerRow.createCell(i).setCellValue(columnNames.get(i));
     }
-
     SXSSFWorkbook workbookS = new SXSSFWorkbook(workbook, rowAccessWindowSize, compressTmpFiles);
     SXSSFSheet sheetS = workbookS.getSheetAt(0);
 
@@ -333,7 +333,7 @@ public class ExcelService {
     }
 
     Path filePath = Files.createTempFile(Paths.get(""), "temp-download-", ".xlsx");
-    File file = filePath.toFile();
+//File file = filePath.toFile();
 
     //Path filePath = Paths.get(id + "_OUT.xlsx");
 //    File file = File.createTempFile("test", ".xlsx");
@@ -342,17 +342,31 @@ public class ExcelService {
     //new File("myfile_OUT.xlsx");
     //file.getParentFile().mkdirs();
 
-    FileOutputStream outFile = new FileOutputStream(file);
-    workbookS.write(outFile);
-    System.out.println("Created file: " + filePath.toAbsolutePath().toString());
-    outFile.close();
+    try (var outFile = Files.newOutputStream(filePath)) {
+      //FileOutputStream outFile = new FileOutputStream(file);
+      workbookS.write(outFile);
+      System.out.println("Created file: " + filePath.toAbsolutePath().toString());
+      //outFile.close();
+    }
     //ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
 
     //FileSystemResource fsr = new FileSystemResource("C:\\Users\\barse\\IdeaProjects\\xls-file-create\\myfile_OUT2.xlsx");
 //    workbookS.write(byteOut);
     //System.out.println("ByteArrayOutputStream записан " + byteOut.toString(Charset.defaultCharset()));
-    workbookS.dispose();
     workbookS.close();
+    workbookS.close();
+    if (!workbookS.dispose()) {
+      System.out.println("Временные файлы workbookS НЕ удалены!");
+    } else {
+      System.out.println("Временные файлы workbookS удалены!");
+    }
+
+//    System.out.println("Временные файлы workbookS удалены? " + workbookS.dispose());
+    //
+    System.out.println("Main before return Файл существует? " + Files.exists(filePath));
+    if (Files.exists(filePath)) {
+      System.out.println(filePath.getFileName().toString() + " length " + Files.size(filePath));
+    }
 
     //checking stream parsers
 /*
@@ -374,10 +388,7 @@ public class ExcelService {
     inputStream.close();
  */
     //map.forEach((k,v) -> System.out.println(k + " - " + v));
-    System.out.println("Main before return Файл существует? " + file.exists());
-    if (file.exists()) {
-      System.out.println(file.getName() + " length " + file.length());
-    }
+
 //
 //    InputStream inputStream = new InputStreamDelegator(new BufferedInputStream(new XlsxInputStreamImpl(file))
 //        , file
@@ -401,22 +412,32 @@ public class ExcelService {
 //                .getAbsolutePath());
 //      }
 //    };
-    return new InputStreamDelegator(new BufferedInputStream(new FileInputStream(file)),
-      () -> deleteTempFile(file), file);
+    return new InputStreamDelegator(new BufferedInputStream(Files.newInputStream(filePath)),
+        () -> deleteFileSilently(filePath), filePath.toFile());
 
   }
-//    return new InputStreamDelegator(new BufferedInputStream(new XlsxInputStreamImpl(file)), () -> deleteTempFile(file));
+
+  //    return new InputStreamDelegator(new BufferedInputStream(new XlsxInputStreamImpl(file)), () -> deleteTempFile(file));
 //    //return filePath;
 //  }
-  private void deleteTempFile(File file) {
+  private void deleteFileSilently(Path filePath) {
     try {
-      System.out.println("deleteTempFile Файл существует? " + file.exists());
-      if (file.exists()) {
-        System.out.println(file.getName() + " length " + file.length());
+//      System.out.println("Файл удален? " + Files.deleteIfExists(Paths.get("pomes.xlsx")));
+
+      System.out.println("deleteTempFile Файл существует? " + Files.exists(filePath));
+      if (Files.exists(filePath)) {
+        System.out
+            .println(filePath.toAbsolutePath().toString() + " length " + Files.size(filePath));
       }
-      boolean delete = Files.deleteIfExists(file.toPath());
-      System.out.println("Files.deleteIfExists " + delete +"\n" + file.getAbsolutePath());
+      //boolean delete = Files.deleteIfExists(file.toPath());
+      Files.delete(filePath);
+      System.out.println("Временный файл XLSX удален!" + "\n" + filePath.toAbsolutePath().toString());
+      System.out.println("deleteTempFile Файл существует? " + Files.exists(filePath));
+
     } catch (IOException e) {
+      System.out.println("Попали сюда");
+      System.out.println("Временный файл XLSX НЕ удален!");
+      System.out.println("deleteTempFile Файл существует? " + Files.exists(filePath));
       e.printStackTrace();
     }
   }

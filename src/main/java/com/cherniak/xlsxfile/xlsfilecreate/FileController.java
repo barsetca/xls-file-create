@@ -1,6 +1,7 @@
 package com.cherniak.xlsxfile.xlsfilecreate;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -34,7 +35,7 @@ public class FileController {
 
   private final ExcelService excelService;
   private final JExcelService jExcelService;
-  private final static int ROWS = 2_000;
+  private final static int ROWS = 10;
 
   @GetMapping(path = "/download", produces = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<Resource> getAllByDate() throws IOException {
@@ -53,8 +54,8 @@ public class FileController {
   public ResponseEntity<Resource> getAllByDate2(@RequestParam String id)
       throws IOException, OpenXML4JException, SAXException, InterruptedException {
     long startTime = System.currentTimeMillis();
-    Resource file = getXlsFile2(id);
-    System.out.println("file.getDescription() " + file.getDescription());
+    Resource file = new InputStreamResource(getXlsFile2(id));
+    System.out.println("file.getFilename() " + file.getFilename());
     long endTime = System.currentTimeMillis();
     System.out.println("Total execution time: " + (endTime - startTime) + "ms");
 
@@ -129,7 +130,7 @@ public class FileController {
   }
 
 
-  private Resource getXlsFile2(String id) throws IOException, OpenXML4JException, SAXException {
+  private InputStream getXlsFile2(String id) throws IOException, OpenXML4JException, SAXException {
     List<Accident> allAccidents = new LinkedList<>();
     for (int i = 0; i < ROWS; i++) {
       Accident accident = new Accident();
@@ -153,7 +154,7 @@ public class FileController {
 //        excelService.generateOldFile(allAccidents, LocalDate.now()).toByteArray(),
 //        "myfile_OUT2.xlsx"
 //    );
-    return new InputStreamResource(excelService.generateOldFile(allAccidents, LocalDate.now(), id));
+    return excelService.generateOldFile(allAccidents, LocalDate.now(), id);
   }
 //
 //  private Resource getXlsFile3() throws IOException, WriteException {
