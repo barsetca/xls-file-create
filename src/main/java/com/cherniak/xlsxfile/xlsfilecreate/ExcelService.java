@@ -353,7 +353,7 @@ public class ExcelService {
     //FileSystemResource fsr = new FileSystemResource("C:\\Users\\barse\\IdeaProjects\\xls-file-create\\myfile_OUT2.xlsx");
 //    workbookS.write(byteOut);
     //System.out.println("ByteArrayOutputStream записан " + byteOut.toString(Charset.defaultCharset()));
-    workbookS.close();
+    //workbookS.close();
     workbookS.close();
     if (!workbookS.dispose()) {
       System.out.println("Временные файлы workbookS НЕ удалены!");
@@ -541,16 +541,18 @@ public class ExcelService {
       XSSFReader xssfReader = new XSSFReader(xlsxPackage);
       StylesTable styles = xssfReader.getStylesTable();
       XSSFReader.SheetIterator iter = (XSSFReader.SheetIterator) xssfReader.getSheetsData();
-      //int index = 0;
+      int index = 0;
       while (iter.hasNext()) {
         try (InputStream stream = iter.next()) {
           processSheet(styles, strings, new MappingFromXml(map), stream);
         }
-        //++index;
+        ++index;
       }
+      System.out.println(index);
     } catch (OpenXML4JException | SAXException e) {
       e.printStackTrace();
     }
+
     return map;
   }
 
@@ -614,7 +616,7 @@ public class ExcelService {
                   break;
                   case 1: {
                     if (formattedValue != null && !formattedValue.isEmpty()) {
-                      map.put(key, formattedValue);
+                      map.put(formattedValue, key);
                     }
                   }
                   break;
@@ -673,7 +675,7 @@ public class ExcelService {
     for (int i = 0; i < rows; i++) {
       row = reader.readRow();
       if (i != 0) {
-        map.put(row[0].getValue(), row[1].getValue());
+        map.put( row[1].getValue(), row[0].getValue());
       }
     }
     simpleWorkbook.close();
@@ -714,5 +716,32 @@ public class ExcelService {
     style.setTopBorderColor(IndexedColors.BLUE1.getIndex());
     styles.put("odd", style);
     return styles;
+  }
+
+  //For check upload stream generate xlsx using XSSFWorkbook how template for table size in SXSSFWorkbook
+  public void generateOldFileUpload()
+      throws IOException {
+
+    //checking stream parsers
+    File file = new File("C:\\Users\\barse\\IdeaProjects\\xls-file-create\\parse.xlsx");
+ FileInputStream inputStream = new FileInputStream(file);
+ long timeStart = System.currentTimeMillis();
+
+
+    //BufferedInputStream inputStream = new BufferedInputStream(new XlsxInputStreamImpl(file));
+    //InputStream is = new XlsxInputStreamImpl(file);
+    //inputStream.close();
+    //is.close();
+
+    //Map<String, String> map = parseFileSjxlsx(inputStream);
+
+  // Map<String, String> map = parseExcel(inputStream);
+   Map<String, String> map = parseExcelWithoutMapping(inputStream);
+    long timeEnd = System.currentTimeMillis();
+    System.out.println("creating map for " + (timeEnd - timeStart) + " ms");
+    System.out.println("map size " + map.size());
+    map.forEach((k,v) -> System.out.println(k + " - " + v));
+    inputStream.close();
+
   }
 }

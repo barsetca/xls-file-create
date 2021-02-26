@@ -37,6 +37,17 @@ public class FileController {
   private final JExcelService jExcelService;
   private final static int ROWS = 10;
 
+  @GetMapping(path = "/upload", produces = MediaType.MULTIPART_FORM_DATA_VALUE)
+  public ResponseEntity<Resource> checkParser() throws IOException {
+     Resource file = getXlsFile();
+     excelService.generateOldFileUpload();
+
+    return ResponseEntity.ok()
+        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" +
+            URI.create(file.getDescription()).toASCIIString())
+        .body(file);
+  }
+
   @GetMapping(path = "/download", produces = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<Resource> getAllByDate() throws IOException {
     long startTime = System.currentTimeMillis();
@@ -49,6 +60,7 @@ public class FileController {
     System.out.println("Total execution time: " + (endTime - startTime) + "ms");
     return response;
   }
+
 
   @GetMapping(path = "/download2", produces = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<Resource> getAllByDate2(@RequestParam String id)

@@ -42,7 +42,7 @@ public class MappingFromXml implements SheetContentsHandler {
         break;
         case 1: {
           if (formattedValue != null && !formattedValue.isEmpty()) {
-            map.put(key, formattedValue);
+            map.put(formattedValue, key);
           }
         }
         break;
